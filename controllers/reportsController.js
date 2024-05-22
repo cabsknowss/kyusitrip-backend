@@ -3,6 +3,7 @@ import Report from '../models/reportModel.js'
 import User from '../models/userModel.js'
 import jwt from 'jsonwebtoken'
 import config from '../utils/config.js'
+import NodeGeocoder from 'node-geocoder'
 const reportsRouter = express.Router()
 
 // Authorization
@@ -14,6 +15,16 @@ const getTokenFrom = req => {
   return null
 }
 
+const options = {
+  provider: 'google',
+
+  // Optional depending on the providers
+  // fetch: customFetchImplementation,
+  apiKey: process.env.REACT_APP_API_KEY,
+  // formatter: string
+};
+
+const geocoder = NodeGeocoder(options);
 
 reportsRouter.get('/', async (req, res) => {
   try {
@@ -65,6 +76,7 @@ const TTL_DURATIONS = {
   "Closure": 60 * 60
 };
 
+
 reportsRouter.post('/', async (req, res) => {
   const {latLng, description, category} = req.body
 
@@ -83,6 +95,9 @@ reportsRouter.post('/', async (req, res) => {
       })
     }
 
+    const address = await geocoder.reverse({ lat: latLng.lat, lon: latLng.lng });
+
+
     const ttlDuration = TTL_DURATIONS[category.label]
 
     // Save Report
@@ -92,6 +107,7 @@ reportsRouter.post('/', async (req, res) => {
       description: description,
       category: category,
       ttlDuration: ttlDuration, // Include TTL Duration in the report
+      address: address[0].formattedAddress,
       user: user.id,
     })
     const savedReport = await report.save()
